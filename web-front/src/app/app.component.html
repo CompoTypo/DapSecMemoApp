@@ -1,0 +1,361 @@
+<!-- 
+NAV BAR SECTION
+
+Sign in/out, search bar for authenticated users, brand
+-->
+<nav>
+  <div id="left">
+    <!-- <img /> -->
+    <h2 id="title">DAPSECPROJ</h2>
+  </div>
+  <div id="right">
+    <div *ngIf="isLoggedIn">
+      <button id="signout" (click)="signOut()">Sign Out</button>
+    </div>
+    <div *ngIf="!isLoggedIn">
+      <button id="signin" (click)="showSigningInModal = true; showSigningUpModal = false">Sign In</button>
+      <button id="signup" (click)="showSigningInModal = false; showSigningUpModal = true">Sign Up</button>
+    </div>
+  </div>
+</nav>
+
+
+<div id="content">
+  <!-- 
+  ASIDE SECTION
+
+  Navigate forums and pages
+  only shows if logged in
+  -->
+  <aside *ngIf="isLoggedIn">
+    <!-- 
+    FORUM ASIDE
+    -->
+    <div *ngIf="selectedForumIndex < 0" id="aside-forums">
+      <h3>Forums</h3>
+      <div class="card" *ngFor="let forum of user.forums; let i = index"
+        [style.backgroundColor]="selectedForumIndex == i ? '#9FA956' : 'white'">
+        <div (click)="selectedForumIndex = i; getPages(forum.id)">
+          <h3>{{ forum.forum_name }}</h3>
+        </div>
+        <div *ngIf="user.forums[i].is_admin" [style]="{ display: 'inline', float: 'right', margin: 'auto' }">
+          <fa-icon [style]="{ 'padding-right': '10px' }" size="lg" [icon]="cog"
+            (click)="showForumSettingsModal = true; selectedForumIndex = i">
+          </fa-icon>
+          <fa-icon [style]="{ 'padding-right': '10px' }" size="lg" [icon]="trash" (click)="deleteForum(forum.id)">
+          </fa-icon>
+        </div>
+      </div>
+      <div id="add_card" (click)="addForum()">
+        <span>
+          <fa-icon [icon]="plus"></fa-icon> Add a new forum
+        </span>
+      </div>
+    </div>
+
+    <!-- 
+    PAGE ASIDE
+    -->
+    <div *ngIf="selectedForumIndex >= 0" id="aside-forum-pages">
+      <div style="position: relative; display: inline-block">
+        <fa-icon size="lg" [icon]="chevronLeft" (click)="selectedForumIndex = selectedPageIndex = -1"></fa-icon>
+        <h3>{{ user.forums[selectedForumIndex].forum_name }} Pages</h3>
+      </div>
+      <div class="card" *ngFor="let page of user.forums[selectedForumIndex].pages; let i = index"
+        (click)="selectedPageIndex = i; getMessages(user.forums[selectedForumIndex].id, page.id)"
+        [style.backgroundColor]="selectedPageIndex == i ? '#9FA956' : 'white'">
+        <div>
+          <h3>{{ page.page_name }}</h3>
+        </div>
+      </div>
+      <div *ngIf="user.forums[selectedForumIndex].is_admin" id="add_card" (click)="addPage()">
+        <span>
+          <fa-icon [icon]="plus" size="lg"></fa-icon> Add a new page
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 
+  MAIN SECTION
+
+  Shows messages of selected page if loggedin
+  -->
+  <main>
+    <div *ngIf="!isLoggedIn">
+      <h2>Sign in or Sign up to save a memo</h2>
+    </div>
+    <div *ngIf="isLoggedIn && selectedForumIndex >= 0 && selectedPageIndex >= 0">
+      <h2>{{ user.forums[selectedForumIndex].pages[selectedPageIndex].page_name }} Messages</h2>
+      <ul>
+        <li class="message" *ngFor="let message of user.forums[selectedForumIndex].pages[selectedPageIndex].messages"
+          [ngStyle]="{ 'background-color' : user.user_name === message.user_name ? '#eeeeee' : 'inherit' }">
+          <span><i>
+              {{ message.user_name }}
+              {{ message.posted | date }}
+            </i></span>
+          <h5>{{ message.text }}</h5>
+        </li>
+      </ul>
+      <div style="position: sticky; bottom: 0">
+        <input #message placeholder="Enter a message. . . " />
+        <button (click)="submitMessage(message.value)">Send</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 
+SIGNIN/LOGIN MODEL SECTION
+
+enter username and password
+-->
+<app-modal *ngIf="showSigningInModal" id="signin_modal">
+  <fa-icon [style]="{ 'float': 'right' }" size="lg" [icon]="times" (click)="showSigningInModal = false"></fa-icon>
+  <form [formGroup]="signinForm" (ngSubmit)="submitSignIn()">
+    <div>
+      <h2>Login Form</h2>
+      <label for="uname" id="un">Username: </label>
+      <input type="text" formControlName="user_name" placeholder="Enter Username" id="uname" /><br />
+
+      <label for="upass" id="ps">Password: </label>
+      <input type="password" formControlName="password" placeholder="Enter Password" id="upass" /><br />
+      <button type="submit" value="Login" id="submit">Login</button>
+      <a (click)="showSigningInModal = false; showSigningUpModal = true"> New Member? </a>
+    </div>
+  </form>
+  <button (click)="showSigningUpModal = false">Back to main page</button>
+</app-modal>
+
+<!-- 
+SIGNUP/REGISTER MODEL SECTION
+
+enter username, email, password, and confirm password 
+-->
+<app-modal *ngIf="showSigningUpModal" id="signup_modal">
+  <fa-icon [style]="{ 'float': 'right' }" size="lg" [icon]="times" (click)="showSigningUpModal = false"></fa-icon>
+  <form [formGroup]="signupForm" (ngSubmit)="submitSignUp()">
+    <h2>Registration Form</h2>
+
+    <label for="r3">Username: </label>
+    <input type="text" formControlName="user_name" /><br />
+
+    <label for="r4" id="pwd">Password: </label>
+    <input type="password" formControlName="password" /><br />
+
+    <label for="r5" id="pwd">Confirm password: </label>
+    <input type="password" formControlName="password2" /><br />
+
+    <label for="r6" id="em">Email: </label>
+    <input type="text" formControlName="email" /><br />
+
+    <button type="submit" value="Submit" id="button">Register</button>
+  </form>
+  <button (click)="closeSignUpModal()">Back to main page</button>
+</app-modal>
+
+<!-- 
+ADD FORUM MODEL SECTION
+  CREATE FORUM
+  input forum name and select its visibility (public or private)
+
+  JOIN FORUM
+  enter a forum name or id to search
+-->
+<app-modal *ngIf="showAddingForumModal">
+  <fa-icon [style]="{ 'float': 'right' }" size="lg" [icon]="times" (click)="showAddingForumModal = false"></fa-icon>
+  <h2>Add a forum</h2>
+  <div id="selector-bar">
+    <div [ngStyle]="{'background-color': showCreateForumForm ? 'blue': 'initial'}" (click)="showCreateForum()">Create
+      forum
+    </div>
+    <div [ngStyle]="{'background-color': showJoinForumForm ? 'blue': 'initial'}" (click)="showJoinForum()">Join forum
+    </div>
+  </div>
+  <form *ngIf="showCreateForumForm" [formGroup]="createForumForm" (ngSubmit)="submitCreateForumForm()">
+    <label for="r3">Forum name: </label>
+    <input type="text" formControlName="forum_name" /><br />
+
+    <label for="r4">Visibility: </label>
+    <fieldset>
+      <input formControlName="visibility" type="radio" value="pub">
+      <label>Public</label>
+      <input formControlName="visibility" type="radio" value="pri">
+      <label>Private</label>
+    </fieldset>
+
+    <button type="submit" value="Submit" id="button">Create forum</button>
+  </form>
+  <form *ngIf="showJoinForumForm">
+    <input #JoinForumInput list="search_results" placeholder="Search for public forum by name or Id. . ."
+      (input)="getMatchingForums($event.target.value)" />
+    <datalist id="search_results">
+      <option *ngFor="let result of searchResults" (click)="selectedJoinForumId = result.id">
+        {{ result.forum_name + '#' + result.id }}
+      </option>
+    </datalist>
+    <button *ngIf="selectedJoinForumId" id="button" (click)="submitJoinForum(JoinForumInput.value)">Join forum</button>
+  </form>
+</app-modal>
+
+<!-- 
+FORUM SETTING MODEL SECTION
+
+input forum name and select its visibility (public or private)
+-->
+<app-modal *ngIf="showForumSettingsModal">
+  <fa-icon [style]="{ 'float': 'right' }" size="lg" [icon]="times" (click)="showForumSettingsModal = false"></fa-icon>
+  <h1>{{ user.forums[selectedForumIndex].forum_name }}</h1>
+  <h2>Forum settings</h2>
+  <div id="selector-bar-4">
+    <div [ngStyle]="{'background-color': showForumSettingsForm ? 'blue': 'initial'}" (click)="editForum()">
+      Forum settings
+    </div>
+    <div [ngStyle]="{'background-color': showForumRankSettingsForm ? 'blue': 'initial'}" (click)="editForumRanks()">
+      Forum
+      ranks</div>
+    <div [ngStyle]="{'background-color': showForumUserSettingsForm ? 'blue': 'initial'}" (click)="editForumUsers()">
+      Forum
+      users</div>
+    <div [ngStyle]="{'background-color': showForumPageSettingsForm ? 'blue': 'initial'}" (click)="editForumPages()">
+      Forum
+      pages</div>
+  </div>
+  <form *ngIf="showForumSettingsForm" [formGroup]="editForumForm"
+    (ngSubmit)="submitEditForumForm(user.forums[selectedForumIndex].id)">
+    <label for="r3">Forum name: </label>
+    <input type="text" formControlName="forum_name"
+      placeholder="{{ user.forums[selectedForumIndex].forum_name }}" /><br />
+
+    <label for="r4">Visibility: </label>
+    <fieldset>
+      <input formControlName="visibility" type="radio" value="pub">
+      <label>Public</label>
+      <input formControlName="visibility" type="radio" value="pri">
+      <label>Private</label>
+    </fieldset>
+    <button type="submit" value="Submit" id="button">Save edits</button>
+  </form>
+
+  <div *ngIf="showForumRankSettingsForm">
+    <ul>
+      <li class="list-item" *ngFor="let rank of user.forums[selectedForumIndex].ranks; let i = index">
+        <h4>{{ rank.rank_value }} {{ rank.rank_name }}</h4>
+        <div>
+          <fa-icon *ngIf="i > 1" [style]="{ 'float': 'right', 'padding-right': '20px' }" size="lg" [icon]="chevronUp"
+            (click)="swapAndSortRanks(i, i - 1)">
+          </fa-icon>
+          <fa-icon *ngIf="rank.rank_name != 'admin' && user.forums[selectedForumIndex].ranks.length-1 != i"
+            [style]="{ 'float': 'right', 'padding-right': '20px'}" size="lg" [icon]="chevronDown"
+            (click)="swapAndSortRanks(i, i + 1)">
+          </fa-icon>
+        </div>
+      </li>
+      <li *ngIf="!showAddRankInput" class="list-item" (click)="showAddRankInput = true">
+        <fa-icon [icon]="plus" size="lg"></fa-icon>
+        <h4>Add rank</h4>
+      </li>
+      <li *ngIf="showAddRankInput" class="list-item" style="display: inline-block;">
+        <label for="rank_name"></label>
+        <input #rank type="text" name="rank_name">
+        <button (click)="addRank(rank.value); showAddRankInput = false">Add rank</button>
+      </li>
+    </ul>
+    <button type="submit" value="Submit" id="button" (click)="submitForumRankEdits()">Save edits</button>
+  </div>
+
+
+  <form *ngIf="showForumUserSettingsForm">
+    <ul>
+      <li class="list-item" *ngFor="let u of user.forums[selectedForumIndex].users; let i = index">
+        <h4>{{ u.user_name }} {{ u.rank_name }}</h4>
+        <div>
+          <fa-icon *ngIf="u.rank_name != 'admin'" [style]="{ 'float': 'right', 'padding-right': '20px' }" size="lg"
+            [icon]="chevronUp" (click)="promoteUser(u.id, user.forums[selectedForumIndex].id)">
+          </fa-icon>
+          <fa-icon *ngIf="user.forums[selectedForumIndex].ranks.length-1 != i"
+            [style]="{ 'float': 'right', 'padding-right': '20px'}" size="lg" [icon]="chevronDown"
+            (click)="demoteUser(u.id, user.forums[selectedForumIndex].id)">
+          </fa-icon>
+        </div>
+      </li>
+    </ul>
+    <button type="submit" value="Submit" id="button">Save edits</button>
+  </form>
+  <form *ngIf="showForumPageSettingsForm">
+    <h4>Edit Pages</h4>
+    <ul>
+      <li class="list-item" *ngFor="let page of user.forums[selectedForumIndex].pages; let i = index">
+        <div>
+          <h5>{{ page.page_name }}</h5>
+          <label for="Min-viewer-rank"></label>
+        </div>
+        <div>
+          <div *ngIf="editingForumPageSettingIndex != i">
+            <fa-icon (click)="editingForumPageSettingIndex = i;" [style]="{ 'float': 'right', 'padding-right': '20px' }"
+              size="lg" [icon]="edit">
+            </fa-icon>
+          </div>
+          <div *ngIf="editingForumPageSettingIndex === i" style="float: right; display:inline">
+            <label for="Min-viewer-rank">Minimum viewership rank</label>
+            <select #min_viewer_rank name="Min-viewer-rank">
+              <option *ngFor="let rank of user.forums[selectedForumIndex].ranks" value="{{ rank.id }}">
+                {{ rank.rank_name }}
+              </option>
+            </select>
+            <label for="Min-author-rank">Minimum authorship rank</label>
+            <select #min_author_rank name="Min-author-rank">
+              <option *ngFor="let rank of user.forums[selectedForumIndex].ranks" value="{{ rank.id }}">
+                {{ rank.rank_name }}
+              </option>
+            </select>
+            <fa-icon (click)="editingForumPageSettingIndex = -1;"
+              [style]="{ 'float': 'right', 'padding-right': '20px' }" size="lg" [icon]="times">
+            </fa-icon>
+            <fa-icon
+              (click)="submitEditPage(page.id, min_viewer_rank.value, min_author_rank.value); editingForumPageSettingIndex = -1"
+              [style]="{ 'float': 'right', 'padding-right': '20px' }" size="lg" [icon]="save">
+            </fa-icon>
+          </div>
+        </div>
+      </li>
+    </ul>
+    <button type="submit" value="Submit" id="button">Save edits</button>
+  </form>
+</app-modal>
+
+
+
+<!-- 
+ADD PAGE MODEL SECTION
+   
+allows admin rank to create pages for the forum
+Set viewing and contributing permissions based on rank
+-->
+<app-modal *ngIf="showAddingPageModal">
+  <fa-icon [style]="{ 'float': 'right' }" size="lg" [icon]="times" (click)="showAddingPageModal = false"></fa-icon>
+  <h2>Add a page</h2>
+  <form [formGroup]="createPageForm"
+    (ngSubmit)="submitCreatePageForm(user.forums[selectedForumIndex].id); showAddingPageModal = false">
+    <label for="r3">Page name: </label>
+    <input type="text" formControlName="page_name" /><br />
+
+    <label for="r4">Minimum Rank to view: </label>
+    <select formControlName="viewership">
+      <option *ngFor="let rank of user.forums[selectedForumIndex].ranks" value="{{ rank.id }}">
+        {{ rank.rank_name }}
+      </option>
+    </select>
+    <br />
+
+    <label for="r5">Minimum Rank to write: </label>
+    <select formControlName="authorship">
+      <option *ngFor="let rank of user.forums[selectedForumIndex].ranks" value="{{ rank.id }}">
+        {{ rank.rank_name }}
+      </option>
+    </select>
+    <br />
+
+    <button type="submit" value="Submit" id="button">Create page</button>
+  </form>
+</app-modal>
